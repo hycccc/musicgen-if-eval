@@ -2,6 +2,11 @@
 
 **Instruction-following evaluation workbench for text-to-music models.**
 
+[![Live demo](https://img.shields.io/badge/live-hycccc.github.io%2Fmusicgen--if--eval-1fa88c)](https://hycccc.github.io/musicgen-if-eval/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-lightgrey.svg)](LICENSE)
+
+![Step 3 — synced A/B audio compliance with waveform lanes and per-requirement verdicts](docs/step3-audio-compliance.png)
+
 Two artifacts, one methodology:
 
 | File | What it is |
@@ -13,7 +18,9 @@ Two artifacts, one methodology:
 
 Text-to-music prompts bundle many constraints — key, tempo, harmony, structure, vocals, negative controls. The workbench decomposes evaluation into a four-step flow:
 
-1. **Requirement confirmation** — the user prompt is decomposed into per-dimension requirements (14 dimension types, L0–L3 difficulty tiers), with evidence spans highlighted inline in the original prompt.
+1. **Requirement confirmation** — the user prompt is decomposed into per-dimension requirements (14 dimension types, L0–L3 difficulty tiers), with evidence spans highlighted inline in the original prompt:
+
+   ![Step 1 — requirement confirmation with inline evidence-span highlighting](docs/step1-requirements.png)
 2. **PE transcription check** — before judging audio, judge the *prompt engineering*: did the system's section-prompt rewrite honor the user's instructions? Attribution matters — a failure caused by a bad rewrite is not a model failure. (Demo case 3 plants a deliberate rewrite conflict.)
 3. **Audio compliance** — a synchronized A/B player with waveform lanes, section arrangement overlays, gain matching and looping; per-requirement verdicts anchored by evidence modules: structured captions, instrument-activity transcription, loudness (BS.1770-style), spectral diagnostics, blind reverb heuristics, and offline MIR estimates — every automated signal labeled with its authority level ("guardrail, not gold").
 4. **Results & attribution** — QC summary, A/B comparison, and failure attribution, exportable for the eval pipeline.
