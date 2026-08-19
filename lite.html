@@ -442,5 +442,162 @@ document.getElementById("export").onclick = () => {
 
 render();
 </script>
+<style>
+/* ── guided tour (lite) ─────────────────────────────────────────────── */
+.gtour-spot{position:fixed;z-index:9001;border-radius:10px;box-shadow:0 0 0 9999px rgba(10,12,15,.72),0 0 0 2px var(--accent);transition:top .25s ease,left .25s ease,width .25s ease,height .25s ease;pointer-events:none}
+.gtour-mask{position:fixed;inset:0;z-index:9000}
+.gtour-card{position:fixed;z-index:9002;width:min(380px,calc(100vw - 32px));background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:16px 18px 12px;color:var(--text);box-shadow:0 20px 50px rgba(0,0,0,.5);transition:top .25s ease,left .25s ease}
+.gtour-card .gtour-step{font-family:var(--mono);font-size:11px;letter-spacing:.1em;color:var(--accent);margin-bottom:6px}
+.gtour-card h3{margin:0 0 6px;font-size:15px}
+.gtour-card p{margin:0 0 12px;font-size:13px;line-height:1.55;color:var(--muted)}
+.gtour-card p b{color:var(--text)}
+.gtour-nav{display:flex;align-items:center;gap:8px}
+.gtour-dots{flex:1;display:flex;gap:5px}
+.gtour-dots i{width:6px;height:6px;border-radius:50%;background:var(--line)}
+.gtour-dots i.on{background:var(--accent)}
+.gtour-btn{font:inherit;font-size:12.5px;border-radius:7px;border:1px solid var(--line);background:transparent;color:var(--muted);padding:6px 12px;cursor:pointer}
+.gtour-btn:hover{color:var(--text);border-color:var(--accent)}
+.gtour-btn.gtour-primary{background:var(--accent);color:#0d2320;border-color:transparent;font-weight:600}
+.gtour-launch{font:inherit;font-size:12px;border:1px solid var(--line);background:transparent;color:var(--muted);border-radius:7px;padding:6px 10px;cursor:pointer;margin-right:8px}
+.gtour-launch:hover{color:var(--accent);border-color:var(--accent)}
+</style>
+<script>
+/* Guided tour — auto-opens once per browser, replayable from the header. */
+(function () {
+  'use strict'
+  const SEEN_KEY = 'ifeval-lite-tour-done'
+  const $q = (sel) => document.querySelector(sel)
+
+  const STEPS = [
+    { title: 'A one-minute tour',
+      body: 'This is the <b>lite</b> distillation of the instruction-following workbench: one page, six demo cases, everything runs in your browser. The full 1:1 workbench replica lives at <b>index.html</b> — this page shows the methodology at its smallest.' },
+    { target: '#nav',
+      title: 'The case queue',
+      body: 'Six demo items. The audio is <b>synthetic ground truth</b> — three honor their prompt, three carry controlled violations (tempo, key, harmony), so you can check your own judgments against known answers.' },
+    { target: '#prompt',
+      title: 'Requirements live in the prompt',
+      body: 'Each prompt decomposes into <b>per-dimension requirements</b> — tempo, key, harmony — with difficulty tiers. The chord strip below spells the roman numerals into concrete chords for the key.' },
+    { target: '#analyze',
+      title: 'Heuristics are guardrails, not gold',
+      body: 'Play the audio, then run the analysis: tempo by autocorrelation, key by Krumhansl profiles. The key readout shows <b>both relative-key candidates</b> on purpose — chord loops share a pitch-class set, and pretending otherwise would be overclaiming. The verdict stays human.' },
+    { target: '#reqs',
+      title: 'Judge each dimension',
+      body: 'Pass / partial / fail, <b>per requirement</b> — not one vibe score for the whole clip. A failure names the dimension that broke, which is what makes the result actionable upstream.' },
+    { target: '#export',
+      title: 'Notes, then export',
+      body: 'Write the musical basis for your verdicts, then export everything as <b>JSONL</b> — one line per case, ready for an eval pipeline. Replay this tour anytime with the Tour button here in the header.' },
+  ]
+
+  let idx = 0
+  let mask, spot, card, onKey, onReflow
+
+  function el(tag, cls, html) {
+    const n = document.createElement(tag)
+    if (cls) n.className = cls
+    if (html !== undefined) n.innerHTML = html
+    return n
+  }
+
+  function place() {
+    const target = STEPS[idx].target ? $q(STEPS[idx].target) : null
+    const pad = 8
+    if (target) {
+      target.scrollIntoView({ block: 'nearest' })
+      const r = target.getBoundingClientRect()
+      spot.style.display = 'block'
+      spot.style.top = `${r.top - pad}px`
+      spot.style.left = `${r.left - pad}px`
+      spot.style.width = `${r.width + pad * 2}px`
+      spot.style.height = `${r.height + pad * 2}px`
+      const cw = Math.min(380, window.innerWidth - 32)
+      const ch = card.offsetHeight || 200
+      let top, left
+      if (r.right + pad + 14 + cw < window.innerWidth) {
+        left = r.right + pad + 14
+        top = Math.max(14, Math.min(r.top, window.innerHeight - ch - 14))
+      } else if (r.bottom + pad + 12 + ch < window.innerHeight) {
+        left = Math.max(14, Math.min(r.left, window.innerWidth - cw - 14))
+        top = r.bottom + pad + 12
+      } else {
+        left = Math.max(14, Math.min(r.left, window.innerWidth - cw - 14))
+        top = Math.max(14, r.top - pad - 12 - ch)
+      }
+      card.style.top = `${top}px`
+      card.style.left = `${left}px`
+    } else {
+      spot.style.display = 'none'
+      card.style.top = `${Math.max(14, (window.innerHeight - (card.offsetHeight || 220)) / 2)}px`
+      card.style.left = `${Math.max(14, (window.innerWidth - (card.offsetWidth || 380)) / 2)}px`
+    }
+  }
+
+  function render() {
+    const step = STEPS[idx]
+    const dots = STEPS.map((_, i) => `<i${i === idx ? ' class="on"' : ''}></i>`).join('')
+    const last = idx === STEPS.length - 1
+    card.innerHTML = `
+      <div class="gtour-step">${idx + 1} / ${STEPS.length}</div>
+      <h3>${step.title}</h3>
+      <p>${step.body}</p>
+      <div class="gtour-nav">
+        <div class="gtour-dots">${dots}</div>
+        <button class="gtour-btn" data-act="skip">Skip</button>
+        ${idx > 0 ? '<button class="gtour-btn" data-act="prev">Back</button>' : ''}
+        <button class="gtour-btn gtour-primary" data-act="next">${last ? 'Done' : 'Next'}</button>
+      </div>`
+    requestAnimationFrame(() => requestAnimationFrame(place))
+  }
+
+  function stop() {
+    try { localStorage.setItem(SEEN_KEY, '1') } catch (_) {}
+    mask?.remove(); spot?.remove(); card?.remove()
+    mask = spot = card = null
+    document.removeEventListener('keydown', onKey, true)
+    window.removeEventListener('resize', onReflow)
+    window.removeEventListener('scroll', onReflow, true)
+  }
+
+  function start() {
+    if (card) return
+    mask = el('div', 'gtour-mask'); spot = el('div', 'gtour-spot'); card = el('div', 'gtour-card')
+    idx = 0
+    document.body.append(mask, spot, card)
+    mask.addEventListener('click', stop)
+    card.addEventListener('click', (e) => {
+      const act = e.target?.dataset?.act
+      if (act === 'skip') stop()
+      else if (act === 'prev') { idx = Math.max(0, idx - 1); render() }
+      else if (act === 'next') { idx === STEPS.length - 1 ? stop() : (idx += 1, render()) }
+    })
+    onKey = (e) => {
+      if (e.key === 'Escape') { stop(); e.stopPropagation() }
+      else if (e.key === 'ArrowRight' && idx < STEPS.length - 1) { idx += 1; render() }
+      else if (e.key === 'ArrowLeft' && idx > 0) { idx -= 1; render() }
+    }
+    onReflow = () => place()
+    document.addEventListener('keydown', onKey, true)
+    window.addEventListener('resize', onReflow)
+    window.addEventListener('scroll', onReflow, true)
+    render()
+  }
+
+  function init() {
+    const exportBtn = document.getElementById('export')
+    if (exportBtn) {
+      const btn = el('button', 'gtour-launch', 'Tour')
+      btn.type = 'button'
+      btn.title = 'Replay the guided tour'
+      btn.addEventListener('click', start)
+      exportBtn.parentNode.insertBefore(btn, exportBtn)
+    }
+    let seen = false
+    try { seen = localStorage.getItem(SEEN_KEY) === '1' } catch (_) {}
+    if (!seen) setTimeout(start, 700)
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init)
+  else init()
+})()
+</script>
 </body>
 </html>

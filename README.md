@@ -12,7 +12,7 @@ Two artifacts, one methodology:
 | File | What it is |
 |---|---|
 | **[`index.html` — full workbench](https://hycccc.github.io/musicgen-if-eval/)** | A sanitized 1:1 replica of the production evaluation workbench I built and run at work. Full four-step pipeline, synced A/B player, evidence engines. ~25MB, fully self-contained. Opens with a 60-second guided tour on first visit (replayable from the topbar). |
-| **[`lite.html` — lite version](https://hycccc.github.io/musicgen-if-eval/lite.html)** | A minimal single-file distillation of the same methodology, built from scratch. |
+| **[`lite.html` — lite version](https://hycccc.github.io/musicgen-if-eval/lite.html)** | A minimal single-file distillation of the same methodology, built from scratch. Opens with its own one-minute tour. |
 
 ## What the full workbench does
 
